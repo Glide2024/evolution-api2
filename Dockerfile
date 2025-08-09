@@ -1,4 +1,4 @@
-# Final Corrected Dockerfile (v7 - The Right Way)
+# Final Corrected Dockerfile (v8 - Version Lock Fix)
 
 FROM node:20-alpine AS builder
 
@@ -18,6 +18,11 @@ COPY ./tsup.config.ts ./
 
 RUN npm ci --silent
 
+# --- THIS IS THE FINAL, DEFINITIVE FIX ---
+# Force the installation of the older Prisma version that the source code was written for.
+RUN npm install prisma@4.16.2 @prisma/client@4.16.2 --save-exact
+# --- END OF DEFINITIVE FIX ---
+
 COPY ./src ./src
 COPY ./public ./public
 COPY ./prisma ./prisma
@@ -29,7 +34,7 @@ COPY ./Docker ./Docker
 
 RUN chmod +x ./Docker/scripts/* && dos2unix ./Docker/scripts/*
 
-# --- THIS IS THE DEFINITIVE FIX BLOCK ---
+# --- Schema preparation block from previous fix ---
 # 1. Copy the full schema from the postgresql template.
 RUN cp ./prisma/postgresql-schema.prisma ./prisma/schema.prisma
 
@@ -39,12 +44,12 @@ RUN sed -i 's/provider = "postgresql"/provider = "sqlite"/' ./prisma/schema.pris
 # 3. Use 'sed' to replace the database connection string with a simple file path.
 RUN sed -i 's|url = env("DATABASE_URL")|url = "file:./dev.db"|' ./prisma/schema.prisma
 
-# 4. (THE CORRECTED FIX) Use 'sed' to remove all PostgreSQL-specific @db attributes AND their arguments.
+# 4. Use 'sed' to REMOVE all PostgreSQL-specific @db attributes AND their arguments.
 RUN sed -i 's/@db\.[^ ]*//g' ./prisma/schema.prisma
 
 # 5. Now generate the client with the fully cleaned schema.
 RUN npx prisma generate
-# --- END OF FIX BLOCK ---
+# --- END OF SCHEMA PREPARATION ---
 
 # The build will now succeed
 RUN npm run build
