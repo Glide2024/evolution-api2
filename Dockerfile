@@ -1,3 +1,5 @@
+# Corrected Dockerfile
+
 FROM node:20-alpine AS builder
 
 RUN apk update && \
@@ -26,7 +28,8 @@ COPY ./Docker ./Docker
 
 RUN chmod +x ./Docker/scripts/* && dos2unix ./Docker/scripts/*
 
-RUN ./Docker/scripts/generate_database.sh
+# This database script has been removed
+# RUN ./Docker/scripts/generate_database.sh
 
 RUN npm run build
 
@@ -57,4 +60,5 @@ ENV DOCKER_ENV=true
 
 EXPOSE 8080
 
-ENTRYPOINT ["/bin/bash", "-c", ". ./Docker/scripts/deploy_database.sh && npm run start:prod" ]
+# This startup command has been changed to remove the database script
+ENTRYPOINT ["npm", "run", "start:prod"]
