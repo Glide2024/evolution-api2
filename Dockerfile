@@ -1,7 +1,8 @@
-# Final Corrected Dockerfile (v5 - Definitive)
+# Final Corrected Dockerfile (v6 - Definitive Fix)
 
 FROM node:20-alpine AS builder
 
+# Added 'sed' to ensure it's available
 RUN apk update && \
     apk add --no-cache git ffmpeg wget curl bash openssl sed
 
@@ -28,15 +29,22 @@ COPY ./Docker ./Docker
 
 RUN chmod +x ./Docker/scripts/* && dos2unix ./Docker/scripts/*
 
-# This is the definitive fix.
+# --- THIS IS THE DEFINITIVE FIX BLOCK ---
 # 1. Copy the full schema from the postgresql template.
 RUN cp ./prisma/postgresql-schema.prisma ./prisma/schema.prisma
-# 2. Use 'sed' to replace the database provider from "postgresql" to "sqlite".
+
+# 2. Use 'sed' to replace the database provider to "sqlite".
 RUN sed -i 's/provider = "postgresql"/provider = "sqlite"/' ./prisma/schema.prisma
+
 # 3. Use 'sed' to replace the database connection string with a simple file path.
 RUN sed -i 's|url = env("DATABASE_URL")|url = "file:./dev.db"|' ./prisma/schema.prisma
-# 4. Now generate the client with the full schema. This will create all necessary types.
+
+# 4. Use 'sed' to REMOVE all PostgreSQL-specific types like @db.VarChar, @db.JsonB, etc.
+RUN sed -i 's/@db\.[A-Za-z0-9_]\+//g' ./prisma/schema.prisma
+
+# 5. Now generate the client with the fully cleaned schema.
 RUN npx prisma generate
+# --- END OF FIX BLOCK ---
 
 # The build will now succeed
 RUN npm run build
