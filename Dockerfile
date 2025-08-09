@@ -1,4 +1,4 @@
-# Final Corrected Dockerfile (v3)
+# Final Corrected Dockerfile (v4)
 
 FROM node:20-alpine AS builder
 
@@ -28,9 +28,8 @@ COPY ./Docker ./Docker
 
 RUN chmod +x ./Docker/scripts/* && dos2unix ./Docker/scripts/*
 
-# This is the new, more robust fix for the TypeScript errors.
-# It creates a minimal schema file instead of copying one.
-RUN echo 'generator client {\n  provider = "prisma-client-js"\n}\n\ndatasource db {\n  provider = "sqlite"\n  url      = "file:./dev.db"\n}' > ./prisma/schema.prisma
+# This is the final fix. Using printf to correctly create a multi-line schema file.
+RUN printf 'generator client {\n  provider = "prisma-client-js"\n}\n\ndatasource db {\n  provider = "sqlite"\n  url      = "file:./dev.db"\n}' > ./prisma/schema.prisma
 RUN npx prisma generate
 
 # Now the build will work
