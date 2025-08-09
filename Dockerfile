@@ -1,10 +1,9 @@
-# Final Corrected Dockerfile (v8 - Version Lock Fix)
+# Final Corrected Dockerfile (v9 - The Intended Method)
 
 FROM node:20-alpine AS builder
 
-# Added 'sed' to ensure it's available
 RUN apk update && \
-    apk add --no-cache git ffmpeg wget curl bash openssl sed
+    apk add --no-cache git ffmpeg wget curl bash openssl
 
 LABEL version="2.3.1" description="Api to control whatsapp features through http requests." 
 LABEL maintainer="Davidson Gomes" git="https://github.com/DavidsonGomes"
@@ -18,10 +17,8 @@ COPY ./tsup.config.ts ./
 
 RUN npm ci --silent
 
-# --- THIS IS THE FINAL, DEFINITIVE FIX ---
-# Force the installation of the older Prisma version that the source code was written for.
+# Force the correct, older version of Prisma
 RUN npm install prisma@4.16.2 @prisma/client@4.16.2 --save-exact
-# --- END OF DEFINITIVE FIX ---
 
 COPY ./src ./src
 COPY ./public ./public
@@ -34,24 +31,10 @@ COPY ./Docker ./Docker
 
 RUN chmod +x ./Docker/scripts/* && dos2unix ./Docker/scripts/*
 
-# --- Schema preparation block from previous fix ---
-# 1. Copy the full schema from the postgresql template.
-RUN cp ./prisma/postgresql-schema.prisma ./prisma/schema.prisma
+# Use the project's original database generation script.
+# It will use the DATABASE_URL from your Render environment.
+RUN ./Docker/scripts/generate_database.sh
 
-# 2. Use 'sed' to replace the database provider to "sqlite".
-RUN sed -i 's/provider = "postgresql"/provider = "sqlite"/' ./prisma/schema.prisma
-
-# 3. Use 'sed' to replace the database connection string with a simple file path.
-RUN sed -i 's|url = env("DATABASE_URL")|url = "file:./dev.db"|' ./prisma/schema.prisma
-
-# 4. Use 'sed' to REMOVE all PostgreSQL-specific @db attributes AND their arguments.
-RUN sed -i 's/@db\.[^ ]*//g' ./prisma/schema.prisma
-
-# 5. Now generate the client with the fully cleaned schema.
-RUN npx prisma generate
-# --- END OF SCHEMA PREPARATION ---
-
-# The build will now succeed
 RUN npm run build
 
 FROM node:20-alpine AS final
@@ -81,4 +64,4 @@ ENV DOCKER_ENV=true
 
 EXPOSE 8080
 
-ENTRYPOINT ["npm", "run", "start:prod"]
+ENTRYPOINT ["/bin/bash", "-c", ". ./Docker/scripts/deploy_database.sh && npm run start:prod" ]
