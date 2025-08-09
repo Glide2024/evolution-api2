@@ -1,4 +1,4 @@
-# Corrected Dockerfile
+# Final Corrected Dockerfile
 
 FROM node:20-alpine AS builder
 
@@ -28,9 +28,12 @@ COPY ./Docker ./Docker
 
 RUN chmod +x ./Docker/scripts/* && dos2unix ./Docker/scripts/*
 
-# This database script has been removed
-# RUN ./Docker/scripts/generate_database.sh
+# This is the new, critical step to fix the TypeScript errors
+# It generates the necessary type files for the build to succeed
+RUN cp ./prisma/sqlite-schema.prisma ./prisma/schema.prisma
+RUN npx prisma generate
 
+# Now the build will work
 RUN npm run build
 
 FROM node:20-alpine AS final
@@ -60,5 +63,4 @@ ENV DOCKER_ENV=true
 
 EXPOSE 8080
 
-# This startup command has been changed to remove the database script
 ENTRYPOINT ["npm", "run", "start:prod"]
