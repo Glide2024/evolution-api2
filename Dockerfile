@@ -1,4 +1,4 @@
-# Final Corrected Dockerfile (v6 - Definitive Fix)
+# Final Corrected Dockerfile (v7 - The Right Way)
 
 FROM node:20-alpine AS builder
 
@@ -39,8 +39,8 @@ RUN sed -i 's/provider = "postgresql"/provider = "sqlite"/' ./prisma/schema.pris
 # 3. Use 'sed' to replace the database connection string with a simple file path.
 RUN sed -i 's|url = env("DATABASE_URL")|url = "file:./dev.db"|' ./prisma/schema.prisma
 
-# 4. Use 'sed' to REMOVE all PostgreSQL-specific types like @db.VarChar, @db.JsonB, etc.
-RUN sed -i 's/@db\.[A-Za-z0-9_]\+//g' ./prisma/schema.prisma
+# 4. (THE CORRECTED FIX) Use 'sed' to remove all PostgreSQL-specific @db attributes AND their arguments.
+RUN sed -i 's/@db\.[^ ]*//g' ./prisma/schema.prisma
 
 # 5. Now generate the client with the fully cleaned schema.
 RUN npx prisma generate
